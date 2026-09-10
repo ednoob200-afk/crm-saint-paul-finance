@@ -102,19 +102,28 @@ async function semearAdministrador() {
 
   // A lista de acesso é a autoridade sobre quem entra: sem isto, o próprio
   // administrador seria recusado no login.
-  await cliente.query(
-    `INSERT INTO lista_acesso
-       (email, nome, papel, ativo, ativado_em, ativado_por, usuario_id, criado_por,
-        primeiro_acesso_livre)
-     VALUES ($1, $2, 'administrador', true, now(), 'seed', $3, 'seed', false)
-     ON CONFLICT (lower(email)) DO UPDATE
+  const { rowCount } = await cliente.query(
+    `UPDATE lista_acesso
         SET ativo = true,
             papel = 'administrador',
-            usuario_id = EXCLUDED.usuario_id,
-            ativado_em = COALESCE(lista_acesso.ativado_em, now()),
-            atualizado_em = now()`,
+            nome = COALESCE(nome, $2),
+            usuario_id = $3,
+            ativado_em = COALESCE(ativado_em, now()),
+            ativado_por = COALESCE(ativado_por, 'seed'),
+            atualizado_em = now()
+      WHERE lower(email) = lower($1)`,
     [usuario.email, nome, usuario.id],
   )
+
+  if (rowCount === 0) {
+    await cliente.query(
+      `INSERT INTO lista_acesso
+         (email, nome, papel, ativo, ativado_em, ativado_por, usuario_id, criado_por,
+          primeiro_acesso_livre)
+       VALUES ($1, $2, 'administrador', true, now(), 'seed', $3, 'seed', false)`,
+      [usuario.email, nome, usuario.id],
+    )
+  }
 
   console.log(`  → usuário administrador criado e autorizado: ${usuario.email}`)
   return usuario
