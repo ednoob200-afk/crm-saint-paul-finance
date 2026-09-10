@@ -5,7 +5,7 @@
 
 import { bancoConfigurado, primeira } from '@/lib/db'
 import { segredoConfigurado } from '@/lib/auth'
-import { chaveConfigurada, modeloEmUso } from '@/lib/ia'
+import { chaveConfigurada, provedorEmUso } from '@/lib/ia'
 import { storageConfigurado } from '@/lib/storage'
 import { VERSAO_ESTATUTO, ARTIGOS } from '@/lib/estatuto'
 import { QUADROS, PAGINAS } from '@/lib/quadros'
@@ -41,7 +41,15 @@ export async function GET() {
       dependencias,
       banco,
       estatuto: { versao: VERSAO_ESTATUTO, artigos: ARTIGOS.length },
-      modeloIa: chaveConfigurada() ? modeloEmUso() : null,
+      ia: (() => {
+        const p = provedorEmUso()
+        return {
+          provedor: p.nome,
+          modelo: p.configurado ? p.modelo : null,
+          lePdf: p.lePdf,
+          cacheDePrompt: p.temCacheDePrompt,
+        }
+      })(),
       itensDeMenu: QUADROS.length + PAGINAS.length,
       quadrosDeDados: QUADROS.length,
       verificadoEm: new Date().toISOString(),

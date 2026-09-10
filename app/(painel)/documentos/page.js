@@ -1,6 +1,6 @@
 import { exigirSessao } from '@/lib/auth'
 import { listarDocumentos } from '@/lib/repositories/documentos'
-import { chaveConfigurada, modeloEmUso } from '@/lib/ia'
+import { provedorEmUso, tiposLegiveisPelaIa } from '@/lib/ia'
 import { storageConfigurado, TAMANHO_MAXIMO, TIPOS_ACEITOS } from '@/lib/storage'
 import { podeAprovarTriagem } from '@/lib/quadros'
 import Cabecalho from '@/components/Cabecalho'
@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function PaginaDocumentos() {
   const usuario = await exigirSessao()
+  const provedor = provedorEmUso()
 
   let documentos = []
   let erro = null
@@ -42,8 +43,9 @@ export default async function PaginaDocumentos() {
             documentosIniciais={documentos}
             papel={usuario.papel}
             podeDistribuir={podeAprovarTriagem(usuario.papel)}
-            iaConfigurada={chaveConfigurada()}
-            modelo={chaveConfigurada() ? modeloEmUso() : null}
+            iaConfigurada={provedor.configurado}
+            provedor={provedor}
+            tiposLegiveisPelaIa={Object.keys(tiposLegiveisPelaIa())}
             storageConfigurado={storageConfigurado()}
             tamanhoMaximo={TAMANHO_MAXIMO}
             tiposAceitos={Object.values(TIPOS_ACEITOS)}

@@ -13,7 +13,7 @@ import {
   verificarOrigem,
 } from '@/lib/auth'
 import { obterDocumento, registrarSugestao } from '@/lib/repositories/documentos'
-import { TIPOS_DOCUMENTO_IA, chaveConfigurada, triarDocumento } from '@/lib/ia'
+import { chaveConfigurada, provedorEmUso, tiposLegiveisPelaIa, triarDocumento } from '@/lib/ia'
 import { erro, ok, tratarErro } from '@/lib/respostas'
 
 export const dynamic = 'force-dynamic'
@@ -48,7 +48,8 @@ export async function POST(request, { params }) {
 
     // PDF e imagem são lidos pelo próprio modelo; o arquivo vem do Blob.
     let anexo = null
-    if (!documento.conteudo_texto && TIPOS_DOCUMENTO_IA[documento.tipo_arquivo]) {
+    const legiveis = tiposLegiveisPelaIa()
+    if (!documento.conteudo_texto && legiveis[documento.tipo_arquivo]) {
       if (!documento.url) {
         return erro(
           'O arquivo original não está mais acessível. Reenvie o documento ou cole o texto.',
@@ -71,8 +72,12 @@ export async function POST(request, { params }) {
     }
 
     if (!documento.conteudo_texto && !anexo) {
+      const p = provedorEmUso()
       return erro(
-        'Não há conteúdo legível para triar. Cole o texto do documento.',
+        documento.tipo_arquivo === 'application/pdf' && !p.lePdf
+          ? `O provedor de IA em uso (${p.rotulo}, modelo ${p.modelo}) não lê PDF. ` +
+              'Abra o documento, copie o texto e use "Colar texto" para triar.'
+          : 'Não há conteúdo legível para triar. Cole o texto do documento.',
         400,
       )
     }

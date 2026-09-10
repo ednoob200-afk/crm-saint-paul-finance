@@ -19,7 +19,8 @@ export default function Triagem({
   documentosIniciais,
   podeDistribuir,
   iaConfigurada,
-  modelo,
+  provedor,
+  tiposLegiveisPelaIa,
   storageConfigurado,
   tamanhoMaximo,
   tiposAceitos,
@@ -213,8 +214,9 @@ export default function Triagem({
       {!iaConfigurada && (
         <div className="aviso aviso--atencao">
           <strong>Triagem automática indisponível.</strong> Falta a variável de ambiente{' '}
-          <code>ANTHROPIC_API_KEY</code>. Adicione a chave no projeto da Vercel e reimplante. O
-          recebimento de documentos e a classificação manual continuam funcionando.
+          <code>{provedor.nome === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'GROQ_API_KEY'}</code>.
+          Adicione a chave no projeto da Vercel e reimplante. O recebimento de documentos e a
+          classificação manual continuam funcionando.
         </div>
       )}
 
@@ -223,6 +225,25 @@ export default function Triagem({
           <strong>Armazenamento de arquivos indisponível.</strong> Falta{' '}
           <code>BLOB_READ_WRITE_TOKEN</code>. PDF e imagem exigem storage porque a função da Vercel
           não guarda arquivos. Use “Colar texto” enquanto isso.
+        </div>
+      )}
+
+      {iaConfigurada && !provedor.lePdf && (
+        <div className="aviso aviso--atencao">
+          <strong>PDF não é lido automaticamente.</strong> O provedor em uso ({provedor.rotulo},
+          modelo <span className="mono">{provedor.modelo}</span>) não interpreta PDF. O arquivo pode
+          ser enviado e fica guardado, mas para triar abra o documento, copie o texto e use “Colar
+          texto”. Formatos que a IA lê sozinha:{' '}
+          <span className="mono">{tiposLegiveisPelaIa.join(', ') || 'nenhum'}</span>, além de
+          arquivos de texto.
+        </div>
+      )}
+
+      {iaConfigurada && !provedor.temCacheDePrompt && (
+        <div className="aviso">
+          O provedor em uso não tem cache de prompt, então cada triagem recebe os artigos do
+          Estatuto selecionados por relevância, e não o texto integral. A sugestão indica quantos
+          artigos foram considerados — confira a base estatutária antes de distribuir.
         </div>
       )}
 
@@ -247,7 +268,11 @@ export default function Triagem({
       <section className="cartao">
         <div className="cartao__titulo">
           <h2>Receber documento</h2>
-          {modelo && <span className="terciario mono">{modelo}</span>}
+          {iaConfigurada && (
+            <span className="terciario mono">
+              {provedor.rotulo} · {provedor.modelo}
+            </span>
+          )}
         </div>
 
         <div className="abas" role="tablist" aria-label="Forma de envio">
@@ -342,8 +367,11 @@ export default function Triagem({
                 onChange={(e) => definirArquivo(e.target.files?.[0] || null)}
               />
               <span className="campo__ajuda">
-                Aceitos: {tiposAceitos.join(', ')}. Limite de {tamanhoMaximo / 1024 / 1024} MB. PDF e
-                imagem são lidos pelo modelo; arquivos de texto têm o conteúdo extraído no envio.
+                Aceitos: {tiposAceitos.join(', ')}. Limite de {tamanhoMaximo / 1024 / 1024} MB.
+                Arquivos de texto têm o conteúdo extraído no envio.{' '}
+                {provedor.lePdf
+                  ? 'PDF e imagem são lidos pelo próprio modelo.'
+                  : 'PDF fica guardado, mas não é lido pela IA: para triar, cole o texto.'}
               </span>
             </div>
             <div className="barra-acoes">

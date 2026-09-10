@@ -1,6 +1,6 @@
 import { exigirSessao, segredoConfigurado } from '@/lib/auth'
 import { bancoConfigurado, primeira } from '@/lib/db'
-import { chaveConfigurada, modeloEmUso } from '@/lib/ia'
+import { provedorEmUso } from '@/lib/ia'
 import { storageConfigurado, TAMANHO_MAXIMO, TIPOS_ACEITOS } from '@/lib/storage'
 import { ARTIGOS, CAPITULOS, VERSAO_ESTATUTO } from '@/lib/estatuto'
 import { PAGINAS, QUADROS } from '@/lib/quadros'
@@ -48,6 +48,7 @@ function Situacao({ ok, rotuloOk = 'Configurado', rotuloFalta = 'Ausente' }) {
 
 export default async function PaginaConfiguracoes() {
   const usuario = await exigirSessao()
+  const provedor = provedorEmUso()
 
   let banco = { conectado: false, migrado: false, migracoes: null }
   if (bancoConfigurado()) {
@@ -127,10 +128,12 @@ export default async function PaginaConfiguracoes() {
                   <td className="pequeno">O login fica indisponível.</td>
                 </tr>
                 <tr>
-                  <td>IA</td>
-                  <td className="mono pequeno">ANTHROPIC_API_KEY</td>
+                  <td>IA ({provedor.rotulo})</td>
+                  <td className="mono pequeno">
+                    {provedor.nome === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'GROQ_API_KEY'}
+                  </td>
                   <td>
-                    <Situacao ok={chaveConfigurada()} />
+                    <Situacao ok={provedor.configurado} />
                   </td>
                   <td className="pequeno">
                     Triagem e consulta por IA respondem erro legível; o cadastro manual continua.
@@ -215,8 +218,24 @@ export default async function PaginaConfiguracoes() {
                   <td className="mono">{QUADROS.length}</td>
                 </tr>
                 <tr>
+                  <th scope="row">Provedor de IA</th>
+                  <td>{provedor.rotulo}</td>
+                </tr>
+                <tr>
                   <th scope="row">Modelo de IA</th>
-                  <td className="mono">{chaveConfigurada() ? modeloEmUso() : '—'}</td>
+                  <td className="mono">{provedor.configurado ? provedor.modelo : '—'}</td>
+                </tr>
+                <tr>
+                  <th scope="row">IA lê PDF</th>
+                  <td>{provedor.lePdf ? 'Sim' : 'Não: use “Colar texto”'}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Cache de prompt</th>
+                  <td>
+                    {provedor.temCacheDePrompt
+                      ? 'Sim: o Estatuto integral vai no prefixo'
+                      : 'Não: vão os artigos relevantes'}
+                  </td>
                 </tr>
                 <tr>
                   <th scope="row">Limite de upload</th>
