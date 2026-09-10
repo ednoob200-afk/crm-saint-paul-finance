@@ -1,0 +1,34 @@
+{
+  "name": "crm-saint-paul-finance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CRM institucional e gestor de trabalho da Saint Paul Finance, fundamentado no Estatuto Oficial.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate": "node scripts/migrate.mjs",
+    "seed": "node scripts/seed.mjs",
+    "hash-senha": "node scripts/hash-senha.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
+    "@vercel/blob": "^2.8.0",
+    "next": "16.3.4",
+    "pg": "^8.23.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.4",
+    "vitest": "^5.0.0"
+  }
+}

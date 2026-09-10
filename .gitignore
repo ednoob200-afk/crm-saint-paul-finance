@@ -1,0 +1,19 @@
+node_modules
+.next
+out
+build
+coverage
+.DS_Store
+*.pem
+
+# ambiente — nunca versionar segredos
+.env
+.env.local
+.env*.local
+.env.development
+.env.production
+
+.vercel
+npm-debug.log*
+yarn-error.log*
+.eslintcache
