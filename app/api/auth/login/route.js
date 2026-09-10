@@ -6,6 +6,7 @@ import {
   verificarOrigem,
 } from '@/lib/auth'
 import { buscarPorEmail } from '@/lib/repositories/usuarios'
+import { autorizada } from '@/lib/repositories/lista_acesso'
 import { verificarSenha } from '@/lib/senha.mjs'
 import { loginSchema } from '@/lib/validacao'
 import { erro, lerJson, ok, tratarErro } from '@/lib/respostas'
@@ -88,13 +89,23 @@ export async function POST(request) {
       usuario?.senha_hash || HASH_INEXISTENTE,
     )
 
-    if (!usuario || !confere || !usuario.ativo) {
+    // A lista de acesso é a autoridade: um registro em `usuarios` sozinho não
+    // basta para entrar (Art. 97º §1º).
+    const naLista = usuario ? await autorizada(usuario.email) : false
+
+    if (!usuario || !confere || !usuario.ativo || !naLista) {
       contabilizar(ip)
       await registrarAuditoria({
         usuario: validado.data.email,
         acao: 'login_negado',
         recurso: 'sessao',
-        detalhe: !usuario ? 'usuario inexistente' : !confere ? 'senha incorreta' : 'usuario inativo',
+        detalhe: !usuario
+          ? 'usuario inexistente'
+          : !confere
+            ? 'senha incorreta'
+            : !usuario.ativo
+              ? 'usuario inativo'
+              : 'fora da lista de acesso',
         ip,
       })
       return erro('E-mail ou senha incorretos.', 401)

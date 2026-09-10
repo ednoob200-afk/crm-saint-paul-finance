@@ -3,6 +3,7 @@ import { sessaoAtual, segredoConfigurado } from '@/lib/auth'
 import { bancoConfigurado } from '@/lib/db'
 import { contarUsuarios } from '@/lib/repositories/usuarios'
 import { VERSAO_ESTATUTO } from '@/lib/estatuto'
+import { LogoVertical } from '@/components/Marca'
 import FormularioEntrada from './FormularioEntrada'
 
 export const metadata = { title: 'Acesso' }
@@ -29,10 +30,9 @@ export default async function Entrar() {
     <main className="entrada">
       <div className="entrada__cartao">
         <div className="entrada__marca">
-          <span className="entrada__sigla" aria-hidden="true">
-            SPF
-          </span>
-          <h1>Saint Paul Finance</h1>
+          <LogoVertical altura={112} />
+          {/* O nome já está na marca; o título fica para leitores de tela. */}
+          <h1 className="oculto-visual">Saint Paul Finance</h1>
           <p className="terciario sem-margem">
             Liga de Mercado Financeiro da Escola de Negócios Saint Paul
           </p>

@@ -314,18 +314,8 @@ code, kbd, .mono {
   border-bottom: 1px solid rgb(255 255 255 / 9%);
 }
 
-.barra__sigla {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
+.barra__simbolo {
   flex: none;
-  border-radius: 8px;
-  background: var(--accent-jade);
-  color: var(--dark-pine);
-  font-family: var(--fonte-serif);
-  font-size: 0.94rem;
-  font-weight: 700;
 }
 
 .barra__nome {
@@ -678,6 +668,41 @@ legend {
   border-radius: var(--raio);
 }
 a.pastilha--artigo:hover { background: var(--acento); color: var(--primaria-texto); text-decoration: none; }
+
+/* ----------------------------------------------------------------- Marca --- */
+
+.marca-troca {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.marca {
+  display: block;
+  height: auto;
+  max-width: 100%;
+}
+
+/* Verde no tema claro, branca no escuro. A escolha é do CSS: sem JavaScript,
+   sem piscada e sem depender de hidratação. */
+.marca--branca {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='claro']) .marca--verde {
+    display: none;
+  }
+  :root:not([data-theme='claro']) .marca--branca {
+    display: block;
+  }
+}
+
+:root[data-theme='escuro'] .marca--verde {
+  display: none;
+}
+:root[data-theme='escuro'] .marca--branca {
+  display: block;
+}
 
 /* ---------------------------------------------------------------- Avatar --- */
 
@@ -1267,22 +1292,12 @@ tr:hover .alca,
 
 .entrada__marca {
   display: grid;
-  gap: 3px;
+  gap: 6px;
   justify-items: center;
   text-align: center;
 }
-.entrada__sigla {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 11px;
-  background: var(--spf-forward);
-  color: var(--white);
-  font-family: var(--fonte-serif);
-  font-size: 1.15rem;
-  font-weight: 700;
-  margin-bottom: 6px;
+.entrada__marca .marca-troca {
+  margin-bottom: 4px;
 }
 .entrada__nota {
   font-size: 0.76rem;

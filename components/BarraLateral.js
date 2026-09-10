@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { MENU, PAPEIS } from '@/lib/quadros'
 import AlternarTema from '@/components/AlternarTema'
 import BotaoSair from '@/components/BotaoSair'
+import { Simbolo } from '@/components/Marca'
 
 export default function BarraLateral({ usuario, versaoEstatuto }) {
   const caminho = usePathname()
@@ -25,9 +26,8 @@ export default function BarraLateral({ usuario, versaoEstatuto }) {
       aria-label="Navegação principal"
     >
       <div className="barra__marca">
-        <span className="barra__sigla" aria-hidden="true">
-          SPF
-        </span>
+        {/* A barra é sempre escura: o monograma vai na versão branca. */}
+        <Simbolo altura={30} cor="branca" className="barra__simbolo" />
         <div className="crescer">
           <div className="barra__nome">Saint Paul Finance</div>
           <div className="barra__papel">{papel ? papel.rotulo : usuario.papel}</div>

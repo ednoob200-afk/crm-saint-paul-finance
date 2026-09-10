@@ -9,7 +9,9 @@ import {
 import { formatarDataHora } from '@/lib/formato'
 import Cabecalho from '@/components/Cabecalho'
 import { Artigo, Pastilha } from '@/components/Base'
+import { listar as listarListaAcesso } from '@/lib/repositories/lista_acesso'
 import GestaoUsuarios from '@/components/diretoria/GestaoUsuarios'
+import ListaAcesso from '@/components/diretoria/ListaAcesso'
 
 export const metadata = { title: 'Diretoria e permissões' }
 export const dynamic = 'force-dynamic'
@@ -20,11 +22,13 @@ export default async function PaginaDiretoria() {
 
   let usuarios = []
   let auditoria = []
+  let entradasDeAcesso = []
   let erro = null
 
   if (gestor) {
     try {
       usuarios = await listarUsuarios()
+      entradasDeAcesso = await listarListaAcesso()
       auditoria = await listarAuditoria(80)
     } catch (falha) {
       console.error('[diretoria]', falha.message)
@@ -141,7 +145,33 @@ export default async function PaginaDiretoria() {
           <div className="aviso aviso--erro">{erro}</div>
         ) : (
           <>
-            <GestaoUsuarios usuariosIniciais={usuarios} papelAtual={usuario.papel} idAtual={usuario.id} />
+            <ListaAcesso
+              entradasIniciais={entradasDeAcesso}
+              papelAtual={usuario.papel}
+              emailAtual={usuario.email}
+            />
+
+            <details className="cartao">
+              <summary style={{ cursor: 'pointer', fontWeight: 500 }}>
+                Criar acesso definindo a senha você mesmo
+                <span className="terciario pequeno">
+                  {' '}
+                  — caminho alternativo, quando a pessoa não pode criar a própria senha
+                </span>
+              </summary>
+              <p className="campo__ajuda" style={{ marginTop: '10px' }}>
+                Prefira a lista de acesso acima: assim ninguém precisa transmitir senha e a
+                Presidência não conhece a senha de outra pessoa. Use este caminho apenas em
+                exceção, entregando a senha por canal seguro e pedindo a troca depois.
+              </p>
+              <div style={{ marginTop: '12px' }}>
+                <GestaoUsuarios
+                  usuariosIniciais={usuarios}
+                  papelAtual={usuario.papel}
+                  idAtual={usuario.id}
+                />
+              </div>
+            </details>
 
             <section className="cartao">
               <div className="cartao__titulo">

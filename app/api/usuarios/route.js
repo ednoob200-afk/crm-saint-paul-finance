@@ -48,7 +48,7 @@ export async function POST(request) {
     const existente = await buscarPorEmail(validado.data.email)
     if (existente) return erro('Já existe um usuário com este e-mail.', 409)
 
-    const criado = await criarUsuario(validado.data)
+    const criado = await criarUsuario({ ...validado.data, criadoPor: usuario.nome })
 
     await registrarAuditoria({
       usuario: usuario.email,

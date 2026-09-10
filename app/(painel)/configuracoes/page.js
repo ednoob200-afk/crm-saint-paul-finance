@@ -13,9 +13,15 @@ export const dynamic = 'force-dynamic'
 
 const ROTAS = [
   { rota: '/', acesso: 'Redireciona conforme a sessão' },
-  { rota: '/entrar', acesso: 'Pública' },
+  { rota: '/entrar', acesso: 'Pública: entrar e primeiro acesso' },
+  { rota: '/ativar', acesso: 'Pública, protegida pelo token do convite' },
   { rota: '/api/saude', acesso: 'Pública, sem dados sensíveis' },
   { rota: '/api/auth/login', acesso: 'Pública, com limitação de tentativas' },
+  {
+    rota: '/api/primeiro-acesso',
+    acesso: 'Pública: exige e-mail na lista de acesso; limitada por IP',
+  },
+  { rota: '/api/ativar', acesso: 'Pública, protegida pelo token do convite' },
   { rota: '/painel', acesso: 'Sessão' },
   { rota: '/quadros/[slug]', acesso: 'Sessão' },
   { rota: '/estatuto', acesso: 'Sessão' },
@@ -31,6 +37,8 @@ const ROTAS = [
   { rota: '/api/documentos/[id]/aprovar', acesso: 'Diretor' },
   { rota: '/api/estatuto/pergunta', acesso: 'Sessão' },
   { rota: '/api/usuarios', acesso: 'Presidência' },
+  { rota: '/api/lista-acesso', acesso: 'Presidência' },
+  { rota: '/api/lista-acesso/[id]', acesso: 'Presidência' },
   { rota: '/api/pessoas', acesso: 'Sessão' },
 ]
 

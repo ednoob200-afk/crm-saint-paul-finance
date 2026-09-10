@@ -20,6 +20,7 @@ identidade visual do monday.com é utilizado: a identidade é própria da Saint 
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Instalação local](#instalação-local)
 - [Deploy na Vercel](#deploy-na-vercel)
+- [Lista de acesso](#lista-de-acesso)
 - [Rotas e níveis de acesso](#rotas-e-níveis-de-acesso)
 - [Segurança](#segurança)
 - [Triagem por IA](#triagem-por-ia)
@@ -68,6 +69,7 @@ encaminha à Presidência, na forma do Art. 120º II.
 | UI | React 19 e componentes próprios |
 | Estilos | CSS próprio, centralizado em `app/globals.css`. Sem MUI, shadcn ou Tailwind |
 | Tipografia | Spectral (serifada), IBM Plex Sans (interface), IBM Plex Mono (datas, artigos, ids) |
+| Marca | Arquivos oficiais em `public/marca`, verde `#08382F` e branco, com troca por tema via CSS |
 | Banco | PostgreSQL gerenciado (Neon, Supabase Postgres ou Vercel Postgres) |
 | Acesso a dados | `pg` com SQL sempre parametrizado, isolado em `lib/db.js` e `lib/repositories/` |
 | Validação | Zod, no servidor |
@@ -96,7 +98,8 @@ app/
   page.js                      raiz: redireciona conforme a sessão
   not-found.js                 404 institucional
   global-error.js              anteparo de erro, sem stack trace público
-  entrar/                      tela de acesso
+  entrar/                      tela de acesso: entrar e primeiro acesso
+  ativar/                      ativação por link de convite
   (painel)/                    área protegida
     layout.js                  verifica a sessão e monta a barra lateral
     painel/                    visão executiva
@@ -113,17 +116,21 @@ app/
     documentos/ | [id]/ | [id]/triagem | [id]/aprovar
     estatuto/pergunta/
     usuarios/ | [id]/
+    lista-acesso/ | [id]/
+    primeiro-acesso/
+    ativar/
     pessoas/
 
 components/
   Base.js                      pastilha, avatar, prazo, artigo clicável, estado vazio
+  Marca.js                     símbolo e lockups, com troca de cor por tema
   BarraLateral.js              navegação de 15 itens em cinco seções
   Cabecalho.js  AlternarTema.js  BotaoSair.js
   quadro/                      QuadroCliente, Tabela, Kanban, Cronograma, Gaveta,
                                NovoItem, CampoEditavel
   documentos/                  Triagem, RevisaoSugestao
   estatuto/                    PerguntaEstatuto
-  diretoria/                   GestaoUsuarios
+  diretoria/                   ListaAcesso, GestaoUsuarios
 
 lib/
   db.js                        única porta de acesso ao Postgres
@@ -136,12 +143,14 @@ lib/
   storage.js                   Vercel Blob, limites e tipos aceitos
   respostas.js                 respostas de API padronizadas, sem vazar detalhe técnico
   formato.js                   formatação compartilhada, módulo puro
-  repositories/                itens, grupos, usuarios, documentos, indicadores
+  emails.js                    leitura de listas de e-mail coladas, módulo puro
+  repositories/                itens, grupos, usuarios, lista_acesso, documentos,
+                               indicadores
 
 db/migracoes/                  SQL numerado, idempotente e aditivo
 scripts/                       migrate, seed, hash-senha, ambiente
 data/estatuto.json             Estatuto indexado: 121 artigos, 26 capítulos
-testes/                        73 testes de unidade e de coerência estatutária
+testes/                        81 testes de unidade e de coerência estatutária
 ```
 
 ### Menu: 15 itens em cinco seções
@@ -177,7 +186,8 @@ cada quadro ficam em `dados jsonb`, com as chaves restritas às declaradas em `l
 
 | Tabela | Papel |
 |---|---|
-| `usuarios` | Acesso ao sistema: nome, e-mail, hash scrypt, papel, diretoria, ativo |
+| `lista_acesso` | **Whitelist**: quem está autorizado, com que papel e em que diretoria |
+| `usuarios` | Quem já criou a senha: nome, e-mail, hash scrypt, papel, diretoria, ativo |
 | `sessoes` | Sessões ativas; guarda apenas o **hash** do token |
 | `grupos` | Grupos de cada quadro, com cor, ordem e artigo de fundamentação |
 | `itens` | Itens dos quadros, com `dados`, `artigos` e `checklist` em jsonb |
@@ -226,6 +236,7 @@ Copie `.env.example` para `.env.local` e preencha. Nenhum valor real vai para o 
 | `ADMIN_EMAIL` | primeiro acesso | E-mail do primeiro administrador | `npm run seed` não cria usuário |
 | `ADMIN_NOME` | opcional | Nome do primeiro administrador | Usa "Administrador do sistema" |
 | `ADMIN_PASSWORD_HASH` | primeiro acesso | Hash scrypt gerado por `npm run hash-senha` | `npm run seed` não cria usuário |
+
 | `ANTHROPIC_API_KEY` | opcional | Triagem e consulta por IA | Rotas de IA respondem 503 legível |
 | `ANTHROPIC_MODEL` | opcional | Modelo usado | Usa `claude-opus-5` |
 | `BLOB_READ_WRITE_TOKEN` | opcional | Upload de PDF e imagem | Upload recusado; "Colar texto" continua |
@@ -349,6 +360,66 @@ Em **Settings → Domains**, adicione o domínio da Liga e siga as instruções 
 
 ---
 
+## Lista de acesso
+
+Quem pode entrar no sistema é definido em **`/diretoria` → Lista de acesso**, e não pela simples
+existência de um registro de usuário. A lista é a autoridade: no login, além da senha, o sistema
+confere se o e-mail continua autorizado (Art. 97º §1º).
+
+### Como a diretoria libera alguém
+
+1. A Presidência abre `/diretoria` e cola os e-mails na Lista de acesso — um por linha ou
+   separados por vírgula, até 50 por vez.
+2. Escolhe **o que a pessoa pode fazer** (o papel, descrito em linguagem simples na própria tela) e
+   a diretoria.
+3. A pessoa abre `/entrar`, escolhe **Primeiro acesso**, informa o e-mail autorizado e **cria a
+   própria senha**.
+
+Ninguém transmite senha por mensagem, e nem a Presidência conhece a senha de outra pessoa: o banco
+guarda apenas o hash scrypt.
+
+### As duas formas de primeiro acesso
+
+Cada entrada da lista escolhe uma delas, e a Presidência pode trocar a qualquer momento:
+
+| Forma | Como funciona | Quando usar |
+|---|---|---|
+| **Direto na tela de acesso** (padrão) | A pessoa vai a `/entrar` → Primeiro acesso e cria a senha com o e-mail autorizado | Uso normal, dentro da Liga |
+| **Só com link de convite** | A Presidência gera um link, copia e envia por canal seguro; só quem tem o link ativa | Papéis sensíveis, ou quando o e-mail é público |
+
+**O risco do modo direto, declarado.** E-mails institucionais são previsíveis
+(`nome.sobrenome@saintpaul.edu.br`), então quem souber um e-mail que está na lista pode criar a
+senha antes do titular. As defesas são: a lista é pequena e interna; a janela existe apenas até o
+titular ativar; a ativação vai para a trilha de auditoria com data, hora e IP; e a Presidência pode
+revogar e reemitir a qualquer momento. Para papéis sensíveis, use o modo por link, que não tem esse
+risco.
+
+### Revogação
+
+**Revogar acesso** desliga de verdade: apaga o convite pendente, desativa o usuário e **encerra as
+sessões abertas** na hora. Alterar o papel também encerra as sessões, para que a mudança valha
+imediatamente.
+
+Quem já ativou o acesso **não é removido** da lista, é revogado — o Art. 42º VIII e o Art. 72º
+parágrafo único exigem preservar a memória institucional. Só convite nunca usado pode ser apagado.
+
+### Limites de quem gerencia
+
+- A gestão da lista exige papel de **Presidência** ou de administrador do sistema.
+- Ninguém concede papel acima do próprio.
+- Ninguém altera o próprio papel nem revoga o próprio acesso.
+- O link de convite é guardado apenas como hash: só pode ser copiado no momento em que é gerado.
+  Perdido, gera-se outro. Cada link vale 14 dias e serve uma única vez.
+
+### Caminho alternativo
+
+Em `/diretoria` há também **"Criar acesso definindo a senha você mesmo"**, recolhido por padrão.
+Serve à exceção em que a pessoa não pode criar a própria senha. Nesse caso, entregue a senha por
+canal seguro e peça a troca — a lista de acesso é o caminho preferencial justamente por dispensar
+isso.
+
+---
+
 ## Rotas e níveis de acesso
 
 ### Públicas
@@ -356,9 +427,12 @@ Em **Settings → Domains**, adicione o domínio da Liga e siga as instruções 
 | Rota | Observação |
 |---|---|
 | `/` | Redireciona conforme a sessão |
-| `/entrar` | Tela de acesso |
+| `/entrar` | Tela de acesso: entrar e primeiro acesso |
+| `/ativar` | Ativação por link de convite; protegida pelo próprio token |
 | `/api/saude` | Diz apenas **se** cada dependência existe; nunca mostra valor |
 | `/api/auth/login` | Com limitação de tentativas por IP |
+| `/api/primeiro-acesso` | Exige e-mail na lista de acesso; resposta genérica e limitação por IP |
+| `/api/ativar` | Exige token de convite válido, de uso único |
 
 ### Protegidas
 
@@ -369,7 +443,7 @@ Em **Settings → Domains**, adicione o domínio da Liga e siga as instruções 
 | `GET /api/quadros/[slug]/itens`, `/api/itens/[id]`, `/api/itens/[id]/historico`, `/api/pessoas` | Sessão |
 | `POST /api/quadros/[slug]/itens`, `PATCH /api/itens/[id]`, `POST /api/documentos`, `POST /api/documentos/[id]/triagem` | Colaborador |
 | `DELETE /api/itens/[id]`, `POST /api/quadros/[slug]/grupos`, `POST /api/documentos/[id]/aprovar` | Diretor |
-| `/api/usuarios`, `/api/usuarios/[id]` | Presidência |
+| `/api/usuarios`, `/api/usuarios/[id]`, `/api/lista-acesso`, `/api/lista-acesso/[id]` | Presidência |
 | `POST /api/estatuto/pergunta` | Sessão |
 
 ---
@@ -391,7 +465,12 @@ Em **Settings → Domains**, adicione o domínio da Liga e siga as instruções 
 - Cabeçalhos de segurança em `next.config.mjs`: CSP, `X-Frame-Options: DENY`, `nosniff`,
   `Referrer-Policy`, `Permissions-Policy`.
 - Erros nunca expõem stack trace, nome de tabela ou string de conexão; o detalhe fica no log.
-- Trilha de auditoria em `/diretoria`, sem segredos.
+- Trilha de auditoria em `/diretoria`, sem segredos. Registra login, login negado, primeiro acesso
+  ativado e negado, alteração da lista de acesso, criação e exclusão de item, triagem por IA e
+  distribuição de documento.
+- Entrar exige, além da senha correta, que o e-mail continue na lista de acesso ativa. Revogar
+  encerra as sessões abertas.
+- O link de convite é guardado apenas como hash SHA-256, tem uso único e validade de 14 dias.
 - Registros de pessoas **não são excluídos**: a exclusão em Membros & Trainees é recusada com a
   base do Art. 42º VIII e do Art. 72º parágrafo único; altere a situação para "Desligado" ou
   "Alumni".
@@ -471,12 +550,12 @@ institucional sozinha (Art. 100º e Art. 110º).
 
 ```bash
 npm run lint     # ESLint 9 com eslint-config-next
-npm test         # 73 testes, sem necessidade de banco
+npm test         # 81 testes, sem necessidade de banco
 npm run build    # build de produção
 ```
 
-Os testes cobrem hash de senha, índice do Estatuto, validação e sanitização, formatação de datas e
-prazos, permissões por papel e **coerência estatutária**: todo artigo citado por quadro, página,
+Os testes cobrem hash de senha, índice do Estatuto, validação e sanitização, leitura de listas de
+e-mail, formatação de datas e prazos, permissões por papel e **coerência estatutária**: todo artigo citado por quadro, página,
 quórum, tabela de decisão ou diretoria precisa existir no Estatuto vigente, e nenhuma Diretoria
 Financeira pode aparecer como atribuível.
 
@@ -507,8 +586,12 @@ Financeira pode aparecer como atribuível.
   mensagem legível, porque a função da Vercel não guarda arquivos.
 - **A limitação de tentativas de login é por instância.** Em serverless a memória não é
   compartilhada; ela reduz força bruta, mas não substitui um rate limit de plataforma.
-- **Não há troca de senha pelo próprio usuário.** A redefinição é feita pela Presidência ou pelo
-  administrador em `/diretoria`.
+- **Não há troca de senha pelo próprio usuário depois da ativação.** A redefinição é feita pela
+  Presidência em `/diretoria`, revogando e readicionando a pessoa à lista de acesso.
+- **Não há envio de e-mail.** O sistema não dispara convite por e-mail: a Presidência copia o
+  endereço de primeiro acesso, ou o link de convite, e envia pelo canal que a Liga já usa. Por
+  isso o e-mail não é verificado, e o modo direto tem o risco descrito em
+  [Lista de acesso](#lista-de-acesso).
 - **Não há testes de ponta a ponta com Playwright.** A verificação de interface foi feita em
   navegador real; a automação de E2E fica como próximo passo.
 - **A ordenação de itens dentro do grupo não é reordenável por arraste.** A alça `⠿` move a linha

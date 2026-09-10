@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { LogoVertical } from '@/components/Marca'
 
 export const metadata = { title: 'Página não encontrada' }
 
@@ -7,9 +8,7 @@ export default function NaoEncontrado() {
     <main className="entrada">
       <div className="entrada__cartao">
         <div className="entrada__marca">
-          <span className="entrada__sigla" aria-hidden="true">
-            SPF
-          </span>
+          <LogoVertical altura={92} />
           <h1>Página não encontrada</h1>
         </div>
         <p className="sem-margem">

@@ -91,24 +91,44 @@ async function semearAdministrador() {
   }
 
   const nome = (process.env.ADMIN_NOME || '').trim() || 'Administrador do sistema'
+
   const { rows } = await cliente.query(
     `INSERT INTO usuarios (nome, email, senha_hash, papel)
      VALUES ($1, $2, $3, 'administrador')
      RETURNING id, email`,
     [nome, email, hash],
   )
-  console.log(`  → usuário administrador criado: ${rows[0].email}`)
-  return rows[0]
+  const usuario = rows[0]
+
+  // A lista de acesso é a autoridade sobre quem entra: sem isto, o próprio
+  // administrador seria recusado no login.
+  await cliente.query(
+    `INSERT INTO lista_acesso
+       (email, nome, papel, ativo, ativado_em, ativado_por, usuario_id, criado_por,
+        primeiro_acesso_livre)
+     VALUES ($1, $2, 'administrador', true, now(), 'seed', $3, 'seed', false)
+     ON CONFLICT (lower(email)) DO UPDATE
+        SET ativo = true,
+            papel = 'administrador',
+            usuario_id = EXCLUDED.usuario_id,
+            ativado_em = COALESCE(lista_acesso.ativado_em, now()),
+            atualizado_em = now()`,
+    [usuario.email, nome, usuario.id],
+  )
+
+  console.log(`  → usuário administrador criado e autorizado: ${usuario.email}`)
+  return usuario
 }
 
 async function principal() {
   await cliente.connect()
 
   const { rows } = await cliente.query(
-    `SELECT to_regclass('public.usuarios') IS NOT NULL AS pronto`,
+    `SELECT to_regclass('public.usuarios') IS NOT NULL AS usuarios,
+            to_regclass('public.lista_acesso') IS NOT NULL AS lista`,
   )
-  if (!rows[0]?.pronto) {
-    console.error('O banco ainda não foi migrado. Rode `npm run migrate` antes do seed.')
+  if (!rows[0]?.usuarios || !rows[0]?.lista) {
+    console.error('O banco ainda não foi migrado por completo. Rode `npm run migrate` antes do seed.')
     process.exit(1)
   }
 
