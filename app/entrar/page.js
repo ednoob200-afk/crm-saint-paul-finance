@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { sessaoAtual, segredoConfigurado } from '@/lib/auth'
 import { bancoConfigurado } from '@/lib/db'
 import { contarUsuarios } from '@/lib/repositories/usuarios'
+import { contarPendentes } from '@/lib/repositories/lista_acesso'
 import { VERSAO_ESTATUTO } from '@/lib/estatuto'
 import { LogoVertical } from '@/components/Marca'
 import FormularioEntrada from './FormularioEntrada'
@@ -17,10 +18,14 @@ export default async function Entrar() {
   const semSegredo = !segredoConfigurado()
 
   let semUsuarios = false
+  let autorizacoesPendentes = 0
   let erroBanco = null
   if (!semBanco) {
     try {
       semUsuarios = (await contarUsuarios()) === 0
+      // Quem já está autorizado e ainda não criou senha deve ser mandado ao
+      // primeiro acesso, e não a um comando de terminal.
+      if (semUsuarios) autorizacoesPendentes = await contarPendentes()
     } catch (erro) {
       erroBanco = erro?.code === '42P01' ? 'migracao' : 'conexao'
     }
@@ -67,11 +72,18 @@ export default async function Entrar() {
           </div>
         )}
 
-        {!semBanco && !erroBanco && semUsuarios && (
+        {!semBanco && !erroBanco && semUsuarios && autorizacoesPendentes > 0 && (
+          <div className="aviso aviso--ok">
+            <strong>Sistema instalado.</strong> Ninguém criou senha ainda. Se o seu e-mail está na
+            lista de acesso, abra <strong>Primeiro acesso</strong> abaixo e crie a sua.
+          </div>
+        )}
+
+        {!semBanco && !erroBanco && semUsuarios && autorizacoesPendentes === 0 && (
           <div className="aviso aviso--atencao">
-            <strong>Nenhum usuário cadastrado.</strong> Rode <code>npm run seed</code> com{' '}
-            <code>ADMIN_EMAIL</code> e <code>ADMIN_PASSWORD_HASH</code> definidos para criar o
-            primeiro acesso administrativo.
+            <strong>Nenhum acesso autorizado.</strong> A lista de acesso está vazia, então ninguém
+            consegue entrar. Rode <code>npm run seed</code> com <code>ADMIN_EMAIL</code> definido
+            para autorizar o primeiro administrador.
           </div>
         )}
 
