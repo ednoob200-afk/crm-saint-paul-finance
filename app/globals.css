@@ -801,7 +801,10 @@ a.pastilha--artigo:hover { background: var(--acento); color: var(--primaria-text
 }
 
 .tabela {
-  width: 100%;
+  /* As colunas se dimensionam pelo conteúdo, e a tabela nunca fica menor que
+     o painel. O contêiner rola na horizontal quando o conteúdo pede mais. */
+  width: max-content;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.84rem;
@@ -822,6 +825,7 @@ a.pastilha--artigo:hover { background: var(--acento); color: var(--primaria-text
   /* Fundo opaco obrigatório: sem ele o conteúdo aparece atrás ao rolar. */
   background: var(--fundo-sutil);
   padding: 8px 10px;
+  vertical-align: bottom;
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -883,14 +887,15 @@ a.pastilha--artigo:hover { background: var(--acento); color: var(--primaria-text
 
 .celula {
   padding: 5px 10px;
-  min-width: 0;
 }
 .celula--titulo {
   font-weight: 500;
-  min-width: 230px;
-  max-width: 380px;
+  min-width: 200px;
+  /* Teto só para o texto não esticar a linha indefinidamente; acima disso
+     ele quebra, em vez de ser cortado com reticências. */
+  max-width: 460px;
 }
-.celula--status { padding: 0; width: 150px; }
+.celula--status { padding: 0; min-width: 150px; }
 .celula--acoes { width: 62px; padding: 4px 8px; text-align: right; }
 .celula--alca { width: 26px; padding: 0 0 0 6px; }
 
@@ -921,17 +926,22 @@ tr:hover .alca,
   font-family: var(--fonte-sans);
   font-size: 0.86rem;
   font-weight: 500;
+  line-height: 1.35;
   text-align: left;
   cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Nome longo quebra a linha em vez de sumir atrás de reticências. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .titulo-botao:hover { color: var(--primaria); text-decoration: underline; }
 
 /* Edição inline: o campo ocupa a célula inteira e só mostra borda no foco */
 .inline {
+  /* A largura da coluna vem do atributo size, calculado no componente a
+     partir do que foi escrito; aqui o campo apenas ocupa a célula inteira. */
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 5px 8px;
   border: 1px solid transparent;
   border-radius: var(--raio);

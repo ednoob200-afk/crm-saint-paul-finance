@@ -20,6 +20,22 @@ const TIPOS_INPUT = {
 }
 
 /**
+ * Largura do campo em caracteres, para a coluna acompanhar o que foi escrito.
+ *
+ * Um input tem largura intrínseca fixa de cerca de vinte caracteres, então sem
+ * isto a tabela distribui espaço sem olhar o conteúdo e nomes longos aparecem
+ * cortados. Campos de data têm largura própria do navegador e ficam de fora.
+ */
+function larguraEmCaracteres(valor, tipo) {
+  if (tipo === 'data' || tipo === 'numero') return undefined
+  const escrito = String(valor ?? '').length
+  // Piso para a coluna não ficar estreita demais quando vazia; teto para um
+  // texto muito longo não empurrar as outras colunas para fora da tela. Acima
+  // do teto, o valor inteiro aparece ao passar o mouse e na gaveta do item.
+  return Math.min(Math.max(escrito + 2, 12), 56)
+}
+
+/**
  * Campo com escrita adiada: o valor local acompanha a digitação e só é
  * enviado no blur ou no Enter, para não gerar uma requisição por tecla.
  *
@@ -143,6 +159,7 @@ export function CelulaEditavel({ item, coluna, quadro, pessoas, somenteLeitura, 
       <textarea
         className="inline"
         rows={2}
+        cols={larguraEmCaracteres(local, 'texto')}
         value={local}
         aria-label={coluna.rotulo}
         onChange={(e) => definirLocal(e.target.value)}
@@ -157,8 +174,10 @@ export function CelulaEditavel({ item, coluna, quadro, pessoas, somenteLeitura, 
     <input
       className={`inline${coluna.tipo === 'data' ? ' inline--data' : ''}`}
       type={TIPOS_INPUT[coluna.tipo] || 'text'}
+      size={larguraEmCaracteres(local, coluna.tipo)}
       value={local}
       aria-label={coluna.rotulo}
+      title={local || undefined}
       onChange={(e) => definirLocal(e.target.value)}
       onBlur={() => {
         if ((local || '') !== (valor || '')) aoAlterar(coluna.campo, local)

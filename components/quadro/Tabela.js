@@ -163,7 +163,12 @@ export default function Tabela({
                     </td>
 
                     <td className="celula celula--titulo">
-                      <button type="button" className="titulo-botao" onClick={() => aoAbrir(item)}>
+                      <button
+                        type="button"
+                        className="titulo-botao"
+                        title={item.titulo}
+                        onClick={() => aoAbrir(item)}
+                      >
                         {item.titulo}
                       </button>
                     </td>
