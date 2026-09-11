@@ -111,6 +111,16 @@ if (email) {
     "   SET ativo = true, papel = 'administrador', atualizado_em = now()",
     ` WHERE lower(email) = ${literal(email)};`,
     '',
+    '-- Se uma execução anterior deste instalador autorizou outro e-mail que',
+    '-- nunca foi usado, a autorização é removida: acesso administrativo solto',
+    '-- é risco, e o Art. 97º §1º restringe o acesso a quem tem necessidade',
+    '-- funcional. Entradas já ativadas ou criadas por pessoas não são tocadas.',
+    'DELETE FROM lista_acesso',
+    " WHERE criado_por = 'instalação'",
+    '   AND ativado_em IS NULL',
+    '   AND usuario_id IS NULL',
+    `   AND lower(email) <> ${literal(email)};`,
+    '',
   )
 }
 

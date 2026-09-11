@@ -337,12 +337,22 @@ INSERT INTO grupos (quadro, nome, cor, artigo, ordem) VALUES ('challenges', 'Ext
 -- escolhendo "Primeiro acesso".
 -- ---------------------------------------------------------------------------
 INSERT INTO lista_acesso (email, papel, ativo, criado_por, primeiro_acesso_livre)
-VALUES ('student21@saintpaul.edu.br', 'administrador', true, 'instalação', true)
+VALUES ('eduardo.nonaka.gadm@saintpaul.edu.br', 'administrador', true, 'instalação', true)
 ON CONFLICT DO NOTHING;
 
 UPDATE lista_acesso
    SET ativo = true, papel = 'administrador', atualizado_em = now()
- WHERE lower(email) = 'student21@saintpaul.edu.br';
+ WHERE lower(email) = 'eduardo.nonaka.gadm@saintpaul.edu.br';
+
+-- Se uma execução anterior deste instalador autorizou outro e-mail que
+-- nunca foi usado, a autorização é removida: acesso administrativo solto
+-- é risco, e o Art. 97º §1º restringe o acesso a quem tem necessidade
+-- funcional. Entradas já ativadas ou criadas por pessoas não são tocadas.
+DELETE FROM lista_acesso
+ WHERE criado_por = 'instalação'
+   AND ativado_em IS NULL
+   AND usuario_id IS NULL
+   AND lower(email) <> 'eduardo.nonaka.gadm@saintpaul.edu.br';
 
 COMMIT;
 
