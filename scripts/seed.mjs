@@ -10,7 +10,6 @@
 import pg from 'pg'
 import { carregarAmbiente } from './ambiente.mjs'
 import { QUADROS } from '../lib/quadros.js'
-import { gerarHashSenha } from '../lib/senha.mjs'
 
 carregarAmbiente()
 
@@ -47,85 +46,103 @@ async function semearGrupos() {
   return criados
 }
 
+/**
+ * Autoriza o primeiro administrador na lista de acesso.
+ *
+ * Por padrão nenhuma senha é criada aqui: a pessoa vai à tela de acesso,
+ * escolhe "Primeiro acesso" e define a própria senha. Assim nenhuma senha
+ * passa por arquivo, por variável de ambiente ou por mensagem.
+ *
+ * Se ADMIN_PASSWORD_HASH estiver definida, o usuário é criado já com senha —
+ * caminho de exceção, mantido para ambientes automatizados.
+ */
 async function semearAdministrador() {
   const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase()
   if (!email) {
     console.log(
-      '  · ADMIN_EMAIL não definida: nenhum usuário criado. Defina ADMIN_EMAIL e ' +
-        'ADMIN_PASSWORD_HASH (gerado por `npm run hash-senha`) e rode de novo.',
+      '  · ADMIN_EMAIL não definida: nenhum acesso autorizado. Rode de novo com\n' +
+        '    ADMIN_EMAIL=voce@saintpaul.edu.br npm run seed',
     )
     return null
   }
 
-  const { rows: existentes } = await cliente.query(
-    'SELECT id, email FROM usuarios WHERE lower(email) = $1',
+  const nome = (process.env.ADMIN_NOME || '').trim() || null
+  const hash = (process.env.ADMIN_PASSWORD_HASH || '').trim()
+
+  const { rows: jaUsuario } = await cliente.query(
+    'SELECT id FROM usuarios WHERE lower(email) = $1',
     [email],
   )
-  if (existentes.length > 0) {
-    console.log(`  · usuário ${email} já existe; nada alterado.`)
-    return existentes[0]
+
+  // Garante a autorização na lista, que é quem decide se o login passa.
+  const { rowCount: atualizados } = await cliente.query(
+    `UPDATE lista_acesso
+        SET ativo = true,
+            papel = 'administrador',
+            nome = COALESCE(nome, $2),
+            primeiro_acesso_livre = CASE WHEN ativado_em IS NULL THEN true ELSE primeiro_acesso_livre END,
+            atualizado_em = now()
+      WHERE lower(email) = lower($1)`,
+    [email, nome],
+  )
+
+  if (atualizados === 0) {
+    await cliente.query(
+      `INSERT INTO lista_acesso
+         (email, nome, papel, ativo, criado_por, primeiro_acesso_livre)
+       VALUES ($1, $2, 'administrador', true, 'seed', true)`,
+      [email, nome],
+    )
+    console.log(`  → ${email} autorizado como administrador do sistema.`)
+  } else {
+    console.log(`  · ${email} já constava na lista de acesso; autorização confirmada.`)
   }
 
-  let hash = (process.env.ADMIN_PASSWORD_HASH || '').trim()
+  if (jaUsuario.length > 0) {
+    console.log('  · a senha já foi criada anteriormente; nada alterado.')
+    return jaUsuario[0]
+  }
 
   if (!hash) {
-    const senha = process.env.ADMIN_PASSWORD
-    if (!senha) {
-      console.error(
-        '\n  ! ADMIN_PASSWORD_HASH não definida. Gere o hash com `npm run hash-senha` e\n' +
-          '    adicione-o ao ambiente. Nenhuma senha em texto puro é aceita em produção.',
-      )
-      return null
-    }
-    // Conveniência apenas para desenvolvimento local: converte em hash agora e
-    // nunca grava a senha em texto puro.
-    console.log('  ~ ADMIN_PASSWORD encontrada. Convertendo em hash; prefira ADMIN_PASSWORD_HASH.')
-    hash = await gerarHashSenha(senha)
-  }
-
-  if (!hash.startsWith('scrypt$')) {
-    console.error(
-      '  ! ADMIN_PASSWORD_HASH não está no formato esperado. Gere-o com `npm run hash-senha`.',
+    const url = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '')
+    console.log(
+      '\n  Próximo passo, feito por você mesmo:\n' +
+        `    1. abra ${url ? `${url}/entrar` : 'a tela de acesso do sistema'}\n` +
+        '    2. escolha "Primeiro acesso"\n' +
+        `    3. informe ${email} e crie a sua senha\n`,
     )
     return null
   }
 
-  const nome = (process.env.ADMIN_NOME || '').trim() || 'Administrador do sistema'
+  // Caminho de exceção: senha definida fora, por hash.
+  if (!hash.startsWith('scrypt$')) {
+    console.error(
+      '  ! ADMIN_PASSWORD_HASH não está no formato esperado. Gere-o com `npm run hash-senha`,\n' +
+        '    ou remova a variável para usar o primeiro acesso pela tela.',
+    )
+    return null
+  }
 
   const { rows } = await cliente.query(
     `INSERT INTO usuarios (nome, email, senha_hash, papel)
      VALUES ($1, $2, $3, 'administrador')
      RETURNING id, email`,
-    [nome, email, hash],
+    [nome || 'Administrador do sistema', email, hash],
   )
   const usuario = rows[0]
 
-  // A lista de acesso é a autoridade sobre quem entra: sem isto, o próprio
-  // administrador seria recusado no login.
-  const { rowCount } = await cliente.query(
+  await cliente.query(
     `UPDATE lista_acesso
-        SET ativo = true,
-            papel = 'administrador',
-            nome = COALESCE(nome, $2),
-            usuario_id = $3,
+        SET usuario_id = $2,
             ativado_em = COALESCE(ativado_em, now()),
             ativado_por = COALESCE(ativado_por, 'seed'),
+            primeiro_acesso_livre = false,
             atualizado_em = now()
       WHERE lower(email) = lower($1)`,
-    [usuario.email, nome, usuario.id],
+    [email, usuario.id],
   )
 
-  if (rowCount === 0) {
-    await cliente.query(
-      `INSERT INTO lista_acesso
-         (email, nome, papel, ativo, ativado_em, ativado_por, usuario_id, criado_por,
-          primeiro_acesso_livre)
-       VALUES ($1, $2, 'administrador', true, now(), 'seed', $3, 'seed', false)`,
-      [usuario.email, nome, usuario.id],
-    )
-  }
-
-  console.log(`  → usuário administrador criado e autorizado: ${usuario.email}`)
+  console.log(`  → usuário administrador criado com a senha fornecida: ${usuario.email}`)
   return usuario
 }
 
@@ -149,7 +166,7 @@ async function principal() {
       : `  → ${grupos} grupo(s) criado(s) em ${QUADROS.length} quadros.`,
   )
 
-  console.log('Verificando acesso administrativo...')
+  console.log('Autorizando o acesso administrativo...')
   await semearAdministrador()
 
   console.log('\nPronto. Nenhum dado de exemplo foi inserido: os quadros começam vazios.')
