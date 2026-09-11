@@ -20,19 +20,29 @@ const TIPOS_INPUT = {
 }
 
 /**
- * Largura do campo em caracteres, para a coluna acompanhar o que foi escrito.
+ * Envolve o campo para que a coluna acompanhe exatamente o texto escrito.
  *
  * Um input tem largura intrínseca fixa de cerca de vinte caracteres, então sem
- * isto a tabela distribui espaço sem olhar o conteúdo e nomes longos aparecem
- * cortados. Campos de data têm largura própria do navegador e ficam de fora.
+ * isto a tabela distribui espaço sem olhar o conteúdo e o texto aparece
+ * cortado. A sombra invisível repete o conteúdo na mesma fonte, e é ela que o
+ * navegador mede — medida exata, e não contagem de caracteres, que erraria
+ * porque as letras têm larguras diferentes.
+ *
+ * Campos de data têm largura própria do navegador e dispensam a sombra.
  */
-function larguraEmCaracteres(valor, tipo) {
-  if (tipo === 'data' || tipo === 'numero') return undefined
-  const escrito = String(valor ?? '').length
-  // Piso para a coluna não ficar estreita demais quando vazia; teto para um
-  // texto muito longo não empurrar as outras colunas para fora da tela. Acima
-  // do teto, o valor inteiro aparece ao passar o mouse e na gaveta do item.
-  return Math.min(Math.max(escrito + 2, 12), 56)
+function CampoQueAcompanhaOTexto({ valor, rotulo, mono, children }) {
+  return (
+    <span className="campo-auto">
+      <span
+        className={`campo-auto__sombra${mono ? ' campo-auto__sombra--mono' : ''}`}
+        aria-hidden="true"
+      >
+        {/* O espaço final evita que o cursor encoste na borda ao digitar. */}
+        {String(valor ?? '') || rotulo || ''}{' '}
+      </span>
+      {children}
+    </span>
+  )
 }
 
 /**
@@ -159,7 +169,6 @@ export function CelulaEditavel({ item, coluna, quadro, pessoas, somenteLeitura, 
       <textarea
         className="inline"
         rows={2}
-        cols={larguraEmCaracteres(local, 'texto')}
         value={local}
         aria-label={coluna.rotulo}
         onChange={(e) => definirLocal(e.target.value)}
@@ -170,11 +179,10 @@ export function CelulaEditavel({ item, coluna, quadro, pessoas, somenteLeitura, 
     )
   }
 
-  return (
+  const campo = (
     <input
       className={`inline${coluna.tipo === 'data' ? ' inline--data' : ''}`}
       type={TIPOS_INPUT[coluna.tipo] || 'text'}
-      size={larguraEmCaracteres(local, coluna.tipo)}
       value={local}
       aria-label={coluna.rotulo}
       title={local || undefined}
@@ -187,6 +195,15 @@ export function CelulaEditavel({ item, coluna, quadro, pessoas, somenteLeitura, 
         if (e.key === 'Escape') definirLocal(valor ?? '')
       }}
     />
+  )
+
+  // Data e número já têm largura própria do navegador.
+  if (coluna.tipo === 'data' || coluna.tipo === 'numero') return campo
+
+  return (
+    <CampoQueAcompanhaOTexto valor={local} rotulo={coluna.rotulo}>
+      {campo}
+    </CampoQueAcompanhaOTexto>
   )
 }
 

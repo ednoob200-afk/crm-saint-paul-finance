@@ -936,9 +936,52 @@ tr:hover .alca,
 .titulo-botao:hover { color: var(--primaria); text-decoration: underline; }
 
 /* Edição inline: o campo ocupa a célula inteira e só mostra borda no foco */
+/* Campo que acompanha exatamente o texto escrito.
+
+   O invólucro contém uma sombra invisível com o mesmo conteúdo, na mesma
+   fonte e com o mesmo padding do campo. É ela que define a largura da coluna,
+   medida pelo próprio navegador — não por contagem de caracteres, que erraria,
+   já que um "W" é muito mais largo que um "i". O campo fica por cima e
+   preenche o espaço resultante. */
+.campo-auto {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 7rem;
+  max-width: 30rem;
+}
+
+.campo-auto__sombra {
+  /* Mesmas medidas do campo: padding, borda, família e tamanho de fonte.
+     Qualquer divergência aqui vira texto cortado na tela. */
+  display: block;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  font-family: var(--fonte-sans);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  white-space: pre;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.campo-auto__sombra--mono {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.campo-auto .inline {
+  position: absolute;
+  inset: 0;
+}
+
+/* Especificidade igual à de input[type='text'], que é (0,1,1) por causa do
+   seletor de atributo, e mais adiante na folha: assim a medida da sombra e a
+   do campo coincidem de fato. */
+input.inline,
+select.inline,
+textarea.inline,
 .inline {
-  /* A largura da coluna vem do atributo size, calculado no componente a
-     partir do que foi escrito; aqui o campo apenas ocupa a célula inteira. */
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -949,11 +992,16 @@ tr:hover .alca,
   color: var(--texto);
   font-family: var(--fonte-sans);
   font-size: 0.84rem;
+  line-height: 1.4;
 }
 .inline:hover:not(:disabled) { border-color: var(--borda); background: var(--fundo-elevado); }
 .inline:focus { border-color: var(--foco); background: var(--fundo-elevado); }
 .inline:disabled { cursor: default; }
-.inline--data { font-family: var(--fonte-mono); font-variant-numeric: tabular-nums; }
+input.inline--data,
+.inline--data {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+}
 
 /* Select de status ocupando a célula, como pastilha grande */
 .status-select {
