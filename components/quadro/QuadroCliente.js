@@ -15,6 +15,7 @@ import Kanban from '@/components/quadro/Kanban'
 import Cronograma from '@/components/quadro/Cronograma'
 import Gaveta from '@/components/quadro/Gaveta'
 import NovoItem from '@/components/quadro/NovoItem'
+import Importar from '@/components/quadro/Importar'
 
 const ABAS = [
   { chave: 'tabela', rotulo: 'Tabela' },
@@ -40,11 +41,14 @@ export default function QuadroCliente({ slug, dadosIniciais, papel, pessoas }) {
   const [recolhidos, definirRecolhidos] = useState(() => new Set())
   const [aberto, definirAberto] = useState(null)
   const [criando, definirCriando] = useState(null)
+  const [importando, definirImportando] = useState(false)
   const [mensagem, definirMensagem] = useState(null)
   const [salvando, definirSalvando] = useState(false)
 
   const somenteLeitura = !podeMutar(papel)
   const podeExcluir = podeAdministrar(papel) || papel === 'diretor'
+  // Criar muitos itens de uma vez é ato de gestão, como na rota.
+  const podeImportar = podeExcluir
 
   const responsaveis = useMemo(() => {
     const conjunto = new Set(itens.map((i) => i.responsavel).filter(Boolean))
@@ -239,6 +243,11 @@ export default function QuadroCliente({ slug, dadosIniciais, papel, pessoas }) {
 
         <div className="barra-acoes">
           {salvando && <span className="carregando">Salvando…</span>}
+          {podeImportar && (
+            <button type="button" className="botao" onClick={() => definirImportando(true)}>
+              Importar planilha
+            </button>
+          )}
           {!somenteLeitura && (
             <button
               type="button"
@@ -355,13 +364,20 @@ export default function QuadroCliente({ slug, dadosIniciais, papel, pessoas }) {
         <Vazio titulo={`Nenhum registro em ${quadro.nome}`}>
           <p className="sem-margem">{quadro.descricao}</p>
           {!somenteLeitura ? (
-            <button
-              type="button"
-              className="botao botao--primario"
-              onClick={() => definirCriando(grupos[0]?.id || null)}
-            >
-              Criar o primeiro item
-            </button>
+            <div className="barra-acoes">
+              <button
+                type="button"
+                className="botao botao--primario"
+                onClick={() => definirCriando(grupos[0]?.id || null)}
+              >
+                Criar o primeiro item
+              </button>
+              {podeImportar && (
+                <button type="button" className="botao" onClick={() => definirImportando(true)}>
+                  Importar de uma planilha
+                </button>
+              )}
+            </div>
           ) : (
             <p className="sem-margem">
               Seu papel permite consulta. Peça acesso de colaborador à Presidência.
@@ -418,6 +434,18 @@ export default function QuadroCliente({ slug, dadosIniciais, papel, pessoas }) {
           aoAlterar={alterar}
           aoFechar={() => definirAberto(null)}
           aoExcluir={excluir}
+        />
+      )}
+
+      {importando && (
+        <Importar
+          quadro={quadro}
+          aoFechar={() => definirImportando(false)}
+          aoConcluir={() => {
+            definirImportando(false)
+            // Recarrega do servidor: a importação cria muitos itens de uma vez.
+            window.location.reload()
+          }}
         />
       )}
 
