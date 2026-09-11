@@ -13,11 +13,24 @@ export default function FormularioAtivacao({ token, email }) {
 
   const curta = senha.length > 0 && senha.length < 12
   const divergem = confirmacao.length > 0 && senha !== confirmacao
-  const pronto = nome.trim().length >= 2 && senha.length >= 12 && senha === confirmacao
+  function pendencias() {
+    const faltando = []
+    if (nome.trim().length < 2) faltando.push('informe o nome completo')
+    if (senha.length < 12) faltando.push('use pelo menos 12 caracteres na senha')
+    if (senha !== confirmacao) faltando.push('repita a senha igual')
+    return faltando
+  }
 
   async function enviar(evento) {
     evento.preventDefault()
-    if (enviando || !pronto) return
+    if (enviando) return
+
+    const faltando = pendencias()
+    if (faltando.length > 0) {
+      definirMensagem(`Para continuar: ${faltando.join('; ')}.`)
+      return
+    }
+
     definirMensagem(null)
     definirEnviando(true)
 
@@ -117,7 +130,7 @@ export default function FormularioAtivacao({ token, email }) {
         {divergem && <span className="campo__erro">As senhas não coincidem.</span>}
       </div>
 
-      <button type="submit" className="botao botao--primario" disabled={enviando || !pronto}>
+      <button type="submit" className="botao botao--primario" disabled={enviando}>
         {enviando ? 'Ativando…' : 'Ativar acesso e entrar'}
       </button>
     </form>

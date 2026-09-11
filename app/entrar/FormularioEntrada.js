@@ -25,9 +25,20 @@ export default function FormularioEntrada({ bloqueado = false }) {
   const curta = primeiro && senha.length > 0 && senha.length < 12
   const divergem = primeiro && confirmacao.length > 0 && senha !== confirmacao
 
-  const pronto = primeiro
-    ? email.trim() !== '' && nome.trim().length >= 2 && senha.length >= 12 && senha === confirmacao
-    : email.trim() !== '' && senha !== ''
+  /**
+   * O que ainda falta preencher. O botão nunca é desabilitado por isto: um
+   * botão cinza sem explicação parece defeito. Ao enviar incompleto, a pessoa
+   * recebe a lista do que falta.
+   */
+  function pendencias() {
+    const faltando = []
+    if (email.trim() === '') faltando.push('informe o e-mail')
+    if (primeiro && nome.trim().length < 2) faltando.push('informe o nome completo')
+    if (senha === '') faltando.push('informe a senha')
+    else if (primeiro && senha.length < 12) faltando.push('use pelo menos 12 caracteres na senha')
+    if (primeiro && senha !== confirmacao) faltando.push('repita a senha igual')
+    return faltando
+  }
 
   function trocarModo(novo) {
     definirModo(novo)
@@ -38,7 +49,14 @@ export default function FormularioEntrada({ bloqueado = false }) {
 
   async function enviar(evento) {
     evento.preventDefault()
-    if (enviando || !pronto) return
+    if (enviando) return
+
+    const faltando = pendencias()
+    if (faltando.length > 0) {
+      definirMensagem(`Para continuar: ${faltando.join('; ')}.`)
+      return
+    }
+
     definirMensagem(null)
     definirEnviando(true)
 
@@ -193,11 +211,7 @@ export default function FormularioEntrada({ bloqueado = false }) {
           </div>
         )}
 
-        <button
-          type="submit"
-          className="botao botao--primario"
-          disabled={bloqueado || enviando || !pronto}
-        >
+        <button type="submit" className="botao botao--primario" disabled={bloqueado || enviando}>
           {enviando
             ? primeiro
               ? 'Criando acesso…'
