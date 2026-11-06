@@ -205,7 +205,7 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
           Só quem está nesta lista consegue entrar no sistema. Adicione o e-mail e escolha o que a
           pessoa pode fazer. Ela então vai à tela de acesso, abre <strong>Primeiro acesso</strong> e
           cria a própria senha — ninguém distribui senha, e nem a Presidência conhece a senha de
-          outra pessoa. Revogar aqui encerra o acesso na hora, inclusive as sessões abertas.
+          outra pessoa. Revogar aqui encerra o acesso na hora, inclusive as sessões abertas. <strong>Reiniciar acesso</strong> apaga a senha da pessoa para que ela crie uma nova, como no primeiro acesso.
         </p>
 
         {mensagem && (
@@ -612,6 +612,30 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
                               Reativar
                             </button>
                           )}
+                          {!proprio && entrada.ativado_em && (
+                            <button
+                              type="button"
+                              className="botao botao--pequeno"
+                              title="A senha atual deixa de valer e a pessoa cria uma nova, como no primeiro acesso."
+                              onClick={() => {
+                                const confirmado = window.confirm(
+                                  `Reiniciar o acesso de ${entrada.email}?\n\n` +
+                                    'A senha atual deixa de valer, as sessões abertas são encerradas e a ' +
+                                    'pessoa precisará criar uma nova senha. O histórico é preservado.',
+                                )
+                                if (!confirmado) return
+                                alterar(
+                                  entrada.id,
+                                  { reiniciar: true },
+                                  entrada.primeiro_acesso_livre
+                                    ? 'Acesso reiniciado. A pessoa já pode criar uma nova senha em "Primeiro acesso", na tela de acesso.'
+                                    : 'Acesso reiniciado. Esta entrada exige link de convite: use "Gerar link" e envie à pessoa.',
+                                )
+                              }}
+                            >
+                              Reiniciar acesso
+                            </button>
+                          )}
                           {!entrada.ativado_em && (
                             <button
                               type="button"
@@ -632,9 +656,9 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
         )}
 
         <p className="campo__ajuda" style={{ marginTop: '10px' }}>
-          Quem já ativou o acesso não é removido da lista: é revogado, para preservar a memória
+          Quem já ativou o acesso não é removido da lista: é revogado ou tem o acesso reiniciado, para preservar a memória
           institucional (Art. 42º VIII e Art. 72º parágrafo único). Você não pode alterar o seu
-          próprio papel nem revogar o seu próprio acesso.
+          próprio papel nem revogar ou reiniciar o seu próprio acesso.
         </p>
       </section>
     </div>
