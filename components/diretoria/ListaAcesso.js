@@ -636,13 +636,21 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
                               Reiniciar acesso
                             </button>
                           )}
-                          {!entrada.ativado_em && (
+                          {!proprio && (
                             <button
                               type="button"
-                              className="botao botao--pequeno botao--discreto"
-                              onClick={() => excluir(entrada.id, entrada.email)}
+                              className={`botao botao--pequeno ${entrada.ativado_em ? 'botao--perigo' : 'botao--discreto'}`}
+                              onClick={() => {
+                                const confirmado = window.confirm(
+                                  `Excluir ${entrada.email} da lista de acesso?\n\n` +
+                                    'A pessoa perde o acesso na hora e as sessões abertas são encerradas. ' +
+                                    'Para ela voltar, será preciso adicionar o e-mail de novo.',
+                                )
+                                if (!confirmado) return
+                                excluir(entrada.id, entrada.email)
+                              }}
                             >
-                              Remover
+                              {entrada.ativado_em ? 'Excluir acesso' : 'Remover'}
                             </button>
                           )}
                         </div>
@@ -656,9 +664,10 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
         )}
 
         <p className="campo__ajuda" style={{ marginTop: '10px' }}>
-          Quem já ativou o acesso não é removido da lista: é revogado ou tem o acesso reiniciado, para preservar a memória
-          institucional (Art. 42º VIII e Art. 72º parágrafo único). Você não pode alterar o seu
-          próprio papel nem revogar ou reiniciar o seu próprio acesso.
+          <strong>Revogar</strong> suspende o acesso e pode ser desfeito. <strong>Reiniciar</strong>
+          apaga a senha para a pessoa criar outra. <strong>Excluir</strong> tira a pessoa da lista de vez;
+          o histórico do que ela fez é preservado. Você não pode alterar o seu
+          próprio papel nem revogar, reiniciar ou excluir o seu próprio acesso.
         </p>
       </section>
     </div>
