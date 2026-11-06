@@ -1,13 +1,14 @@
 import { z } from 'zod'
 import {
   exigirPapel,
+  exigirSessao,
   ipDaRequisicao,
   registrarAuditoria,
   verificarOrigem,
 } from '@/lib/auth'
 import { adicionarVarios, listar } from '@/lib/repositories/lista_acesso'
 import { separarEmails } from '@/lib/emails'
-import { DIRETORIAS, NIVEL_PAPEL, PAPEIS } from '@/lib/quadros'
+import { DIRETORIAS, NIVEL_PAPEL, PAPEIS, podeAdicionarAcesso } from '@/lib/quadros'
 import { erro, erroDeValidacao, lerJson, ok, tratarErro } from '@/lib/respostas'
 
 export const dynamic = 'force-dynamic'
@@ -38,7 +39,12 @@ export async function GET() {
 export async function POST(request) {
   try {
     verificarOrigem(request)
-    const usuario = await exigirPapel('presidencia')
+    const usuario = await exigirSessao()
+
+    // Presidência, Vice-Presidência e o diretor da Diretoria Institucional.
+    if (!podeAdicionarAcesso(usuario)) {
+      return erro('Seu papel não autoriza adicionar pessoas à lista de acesso.', 403)
+    }
 
     const corpo = await lerJson(request, 30_000)
     const validado = entradaSchema.safeParse(corpo)
