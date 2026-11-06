@@ -54,7 +54,12 @@ function BotaoCopiar({ texto, rotulo = 'Copiar', className = 'botao botao--peque
   )
 }
 
-export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }) {
+export default function ListaAcesso({
+  entradasIniciais,
+  papelAtual,
+  emailAtual,
+  somenteAdicionar = false,
+}) {
   const [entradas, definirEntradas] = useState(entradasIniciais || [])
   const [emails, definirEmails] = useState('')
   const [papel, definirPapel] = useState('colaborador')
@@ -208,6 +213,13 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
           outra pessoa. Revogar aqui encerra o acesso na hora, inclusive as sessões abertas. <strong>Reiniciar acesso</strong> apaga a senha da pessoa para que ela crie uma nova, como no primeiro acesso.
         </p>
 
+        {somenteAdicionar && (
+          <div className="aviso aviso--atencao" style={{ marginTop: '12px' }}>
+            Você pode adicionar pessoas à lista. Alterar papéis, revogar, reiniciar ou excluir
+            acessos continua com a Presidência.
+          </div>
+        )}
+
         {mensagem && (
           <div
             className={`aviso ${
@@ -314,6 +326,7 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
             </div>
           </div>
 
+          {!somenteAdicionar && (
           <fieldset>
             <legend>Como essa pessoa vai criar a senha</legend>
             <label className="linha pequeno" style={{ alignItems: 'flex-start' }}>
@@ -335,6 +348,7 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
               </span>
             </label>
           </fieldset>
+          )}
 
           <div className="barra-acoes">
             <button
@@ -497,7 +511,7 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
                       <td>
                         <select
                           value={entrada.papel}
-                          disabled={proprio}
+                          disabled={proprio || somenteAdicionar}
                           aria-label={`Papel de ${entrada.email}`}
                           onChange={(e) =>
                             alterar(
@@ -524,6 +538,7 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
                       <td>
                         <select
                           value={entrada.diretoria || ''}
+                          disabled={somenteAdicionar}
                           aria-label={`Diretoria de ${entrada.email}`}
                           onChange={(e) =>
                             alterar(
@@ -547,6 +562,7 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
                         ) : (
                           <select
                             value={entrada.primeiro_acesso_livre ? 'direto' : 'link'}
+                            disabled={somenteAdicionar}
                             aria-label={`Forma de primeiro acesso de ${entrada.email}`}
                             onChange={(e) =>
                               alterar(
@@ -576,6 +592,9 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
                         </div>
                       </td>
                       <td>
+                        {somenteAdicionar ? (
+                          <span className="terciario pequeno">Só a Presidência</span>
+                        ) : (
                         <div className="barra-acoes">
                           {entrada.ativo && !entrada.ativado_em && (
                             <button
@@ -654,6 +673,7 @@ export default function ListaAcesso({ entradasIniciais, papelAtual, emailAtual }
                             </button>
                           )}
                         </div>
+                        )}
                       </td>
                     </tr>
                   )
