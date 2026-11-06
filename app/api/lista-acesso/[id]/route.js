@@ -10,6 +10,7 @@ import {
   definirAtivo,
   obterPorId,
   regerarConvite,
+  reiniciarAcesso,
   remover,
 } from '@/lib/repositories/lista_acesso'
 import { DIRETORIAS, NIVEL_PAPEL, PAPEIS } from '@/lib/quadros'
@@ -30,6 +31,7 @@ const atualizacaoSchema = z.object({
   ativo: z.boolean().optional(),
   primeiroAcessoLivre: z.boolean().optional(),
   novoConvite: z.boolean().optional(),
+  reiniciar: z.boolean().optional(),
 })
 
 export async function PATCH(request, { params }) {
@@ -64,9 +66,9 @@ export async function PATCH(request, { params }) {
     }
     if (
       existente.email.toLowerCase() === usuario.email.toLowerCase() &&
-      (alteracoes.papel || alteracoes.ativo === false)
+      (alteracoes.papel || alteracoes.ativo === false || alteracoes.reiniciar)
     ) {
-      return erro('Você não pode alterar o seu próprio papel nem revogar o seu próprio acesso.', 403)
+      return erro('Você não pode alterar o seu próprio papel nem revogar ou reiniciar o seu próprio acesso.', 403)
     }
 
     let entrada = existente
@@ -91,10 +93,15 @@ export async function PATCH(request, { params }) {
       if (!entrada) return erro('Entrada não encontrada.', 404)
     }
 
+    if (alteracoes.reiniciar) {
+      entrada = await reiniciarAcesso(id)
+      if (!entrada) return erro('Entrada não encontrada.', 404)
+    }
+
     if (alteracoes.novoConvite) {
       if (entrada.ativado_em) {
         return erro(
-          'Esta pessoa já ativou o acesso. Para trocar a senha, revogue e adicione de novo.',
+          'Esta pessoa já ativou o acesso. Use "Reiniciar acesso" para que ela crie uma nova senha.',
           409,
         )
       }
@@ -125,7 +132,7 @@ export async function PATCH(request, { params }) {
   }
 }
 
-/** Remove apenas convite nunca ativado. Quem já entrou é revogado, não apagado. */
+/** Remove apenas convite nunca ativado. Quem já entrou é revogado ou tem o acesso reiniciado, não apagado. */
 export async function DELETE(request, { params }) {
   try {
     verificarOrigem(request)
@@ -139,7 +146,7 @@ export async function DELETE(request, { params }) {
 
     if (existente.ativado_em) {
       return erro(
-        'Esta pessoa já ativou o acesso e possui histórico no sistema. Use "Revogar acesso": ' +
+        'Esta pessoa já ativou o acesso e possui histórico no sistema. Use "Revogar acesso" ou "Reiniciar acesso": ' +
           'o Art. 42º VIII e o Art. 72º parágrafo único exigem preservar a memória institucional.',
         409,
       )
