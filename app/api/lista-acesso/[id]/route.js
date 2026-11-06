@@ -132,7 +132,10 @@ export async function PATCH(request, { params }) {
   }
 }
 
-/** Remove apenas convite nunca ativado. Quem já entrou é revogado ou tem o acesso reiniciado, não apagado. */
+/**
+ * Exclui a entrada da lista de acesso por completo, inclusive de quem já ativou:
+ * a pessoa perde o acesso na hora. O histórico do que ela fez é preservado.
+ */
 export async function DELETE(request, { params }) {
   try {
     verificarOrigem(request)
@@ -144,12 +147,8 @@ export async function DELETE(request, { params }) {
     const existente = await obterPorId(id)
     if (!existente) return erro('Entrada não encontrada.', 404)
 
-    if (existente.ativado_em) {
-      return erro(
-        'Esta pessoa já ativou o acesso e possui histórico no sistema. Use "Revogar acesso" ou "Reiniciar acesso": ' +
-          'o Art. 42º VIII e o Art. 72º parágrafo único exigem preservar a memória institucional.',
-        409,
-      )
+    if (existente.email.toLowerCase() === usuario.email.toLowerCase()) {
+      return erro('Você não pode excluir o seu próprio acesso.', 403)
     }
 
     const removido = await remover(id)
@@ -160,7 +159,7 @@ export async function DELETE(request, { params }) {
       papel: usuario.papel,
       acao: 'lista_acesso_removida',
       recurso: `lista_acesso/${id}`,
-      detalhe: existente.email,
+      detalhe: existente.ativado_em ? `${existente.email} (acesso já ativado)` : existente.email,
       ip: ipDaRequisicao(request),
     })
 
