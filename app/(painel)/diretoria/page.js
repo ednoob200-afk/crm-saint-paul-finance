@@ -4,6 +4,7 @@ import {
   DIRETORIAS,
   DIRETORIAS_PREVISTAS_NAO_INSTITUIDAS,
   PAPEIS,
+  podeAdicionarAcesso,
   podeAdministrar,
 } from '@/lib/quadros'
 import { formatarDataHora } from '@/lib/formato'
@@ -19,6 +20,8 @@ export const dynamic = 'force-dynamic'
 export default async function PaginaDiretoria() {
   const usuario = await exigirSessao()
   const gestor = podeAdministrar(usuario.papel)
+  // Vice-Presidência e diretor da Diretoria Institucional: só adicionam pessoas.
+  const adicionador = !gestor && podeAdicionarAcesso(usuario)
 
   let usuarios = []
   let auditoria = []
@@ -36,6 +39,15 @@ export default async function PaginaDiretoria() {
         falha.code === '42P01'
           ? 'O banco ainda não foi migrado. Rode `npm run migrate` com a DATABASE_URL do ambiente.'
           : 'Não foi possível carregar usuários e auditoria.'
+    }
+  }
+
+  if (adicionador) {
+    try {
+      entradasDeAcesso = await listarListaAcesso()
+    } catch (falha) {
+      console.error('[diretoria]', falha.message)
+      erro = 'Não foi possível carregar a lista de acesso.'
     }
   }
 
@@ -130,7 +142,18 @@ export default async function PaginaDiretoria() {
           </p>
         </section>
 
-        {!gestor ? (
+        {adicionador ? (
+          erro ? (
+            <div className="aviso aviso--erro">{erro}</div>
+          ) : (
+            <ListaAcesso
+              entradasIniciais={entradasDeAcesso}
+              papelAtual={usuario.papel}
+              emailAtual={usuario.email}
+              somenteAdicionar
+            />
+          )
+        ) : !gestor ? (
           <section className="cartao">
             <div className="cartao__titulo">
               <h2>Gestão de acessos</h2>
